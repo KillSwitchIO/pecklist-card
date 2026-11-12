@@ -26,6 +26,7 @@ const LABELS: Record<string, string> = {
 	days: 'Days ahead',
 	range: 'Range',
 	height: 'Height in pixels (0 grows to fit)',
+	navigation_path: 'Open on tap',
 };
 
 const HELP: Record<string, string> = {
@@ -49,10 +50,16 @@ export function schema(config: CardConfig, people: Option[], lists: Option[], ta
 			{ value: 'list', label: 'List' },
 			{ value: 'agenda', label: 'Agenda' },
 			{ value: 'heatmap', label: 'Busy-day heatmap' },
+			{ value: 'week', label: 'Week strip' },
+			{ value: 'next', label: 'Next up' },
+			{ value: 'board', label: 'Family board' },
+			{ value: 'shopping', label: 'Shopping list' },
+			{ value: 'tiles', label: 'Person tiles' },
 		]),
 		{ name: 'title', selector: { text: {} } },
 		...(view === 'glance' ? [number('max_items', 0, 50), number('days', 1, 60)] : []),
 		...(view === 'agenda' ? [number('days', 1, 60)] : []),
+		...(view === 'tiles' ? [{ name: 'navigation_path', selector: { navigation: {} } }] : []),
 		...(view === 'heatmap'
 			? [
 					select('range', [

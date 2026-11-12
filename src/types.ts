@@ -92,7 +92,7 @@ export interface Accounts {
 	mine: string | null;
 }
 
-export type View = 'glance' | 'list' | 'agenda' | 'heatmap';
+export type View = 'glance' | 'list' | 'agenda' | 'heatmap' | 'week' | 'next' | 'board' | 'shopping' | 'tiles';
 export type Scope = 'all' | 'own' | 'assigned';
 export type Sort = 'date' | 'priority' | 'title' | 'created' | 'manual';
 
@@ -122,6 +122,8 @@ export interface CardConfig {
 	range?: 'month' | 'year';
 	/** Body height in pixels; 0 grows with its content. */
 	height?: number;
+	/** Person tiles: where a tap goes, such as /lovelace/tasks. */
+	navigation_path?: string;
 }
 
 /** A task as the card shows it: with its list, its day, and the account to write it through. */

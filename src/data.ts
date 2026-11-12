@@ -248,6 +248,21 @@ export function glance(items: Item[], today: string, days: number, max: number):
 	return { overdue, today: now, upcoming, next: [...dated, ...undated].slice(0, Math.max(0, max)) };
 }
 
+/** Open tasks dated before today. */
+export function overdue(items: Item[], today: string): Item[] {
+	return items.filter((item) => item.open && item.day !== null && item.day < today);
+}
+
+/** Today and the days after it, each with the tasks that fall on it. */
+export function week(items: Item[], today: string, days = 7): { day: string; items: Item[] }[] {
+	return Array.from({ length: days }, (_, offset) => {
+		const day = addDays(today, offset);
+		return { day, items: items.filter((item) => item.day === day) };
+	});
+}
+
+export const VIEWS = ['glance', 'list', 'agenda', 'heatmap', 'week', 'next', 'board', 'shopping', 'tiles'] as const;
+
 export interface Row {
 	item: Item;
 	subtasks: Item[];

@@ -18,6 +18,8 @@ First version.
   by list and by tag.
 - Assign a task in a shared list from the edit dialog; assignees who are not on the card are named.
 - Sort as in PeckList, by the order you gave the tasks.
+- More views: a week strip, next up (Done and Tomorrow), a family board with a column per person,
+  a shopping list with Clear, and person tiles one dashboard row tall.
 - A visual editor; sorting, compact or comfortable spacing, completed tasks, a fixed height.
 - Colors follow the Home Assistant theme, or use PeckList's Forest palette.
 - A wall tablet layout: big touch targets, adding through Assist voice.

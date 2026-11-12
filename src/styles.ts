@@ -435,6 +435,235 @@ export const styles = css`
 		}
 	}
 
+	/* Week strip */
+	.week {
+		display: grid;
+		grid-template-columns: repeat(7, 1fr);
+		gap: 4px;
+		padding: 2px 8px 6px;
+	}
+	.wday {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 1px;
+		min-width: 0;
+		padding: 6px 0 5px;
+		border-radius: 10px;
+		background: color-mix(in srgb, var(--pl-text) 5%, transparent);
+	}
+	.wday .wd {
+		color: var(--pl-muted);
+		font-size: 0.75em;
+	}
+	.wday b {
+		font-size: 1.15em;
+		font-weight: 500;
+	}
+	.wday.today b {
+		color: var(--pl-accent);
+	}
+	.wday[aria-pressed='true'] {
+		box-shadow: inset 0 0 0 2px var(--pl-accent);
+	}
+	.dots {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 2px;
+		height: 8px;
+	}
+	.dots i {
+		width: 6px;
+		height: 6px;
+		border-radius: 50%;
+	}
+	.dots em {
+		font-style: normal;
+		font-size: 0.65em;
+		color: var(--pl-muted);
+	}
+	:host([kiosk]) .wday {
+		padding: 12px 0 10px;
+	}
+
+	/* Next up */
+	.hero {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		padding: 10px 8px 6px;
+	}
+	.hero-when {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 2px 12px;
+		color: var(--pl-muted);
+		font-size: 0.9em;
+	}
+	.hero-when span {
+		display: inline-flex;
+		align-items: center;
+		gap: 5px;
+	}
+	.hero-when .late,
+	.tile .late {
+		color: var(--pl-late);
+	}
+	.hero-title {
+		font-size: 1.5em;
+		font-weight: 500;
+		line-height: 1.2;
+		text-align: left;
+		overflow-wrap: anywhere;
+	}
+	.hero-title.done {
+		color: var(--pl-muted);
+		font-size: 1.15em;
+	}
+	.hero-actions {
+		display: flex;
+		gap: 8px;
+		margin-top: 2px;
+	}
+	.hero-actions .btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 6px;
+		flex: 1;
+		min-height: 44px;
+		border: 1px solid var(--pl-line);
+	}
+	.hero-actions .btn.primary {
+		flex: 2;
+		border-color: var(--pl-accent);
+	}
+	.hero-more {
+		color: var(--pl-muted);
+		font-size: 0.85em;
+	}
+	:host([kiosk]) .hero-title {
+		font-size: 1.8em;
+	}
+	:host([kiosk]) .hero-actions .btn {
+		min-height: 64px;
+	}
+
+	/* Family board */
+	.board {
+		display: grid;
+		grid-auto-flow: column;
+		grid-auto-columns: minmax(170px, 1fr);
+		gap: 8px;
+		overflow-x: auto;
+		padding-bottom: 4px;
+	}
+	.col {
+		min-width: 0;
+		border-top: 3px solid var(--who);
+		border-radius: 4px 4px 0 0;
+	}
+	/* A column is narrow: the title gets the line, the date goes under it, whatever the spacing. */
+	:host([density='compact']) .col .what {
+		display: block;
+	}
+	:host([density='compact']) .col .name {
+		white-space: normal;
+	}
+	.col .meta .tag {
+		display: none;
+	}
+	.col h3 {
+		color: var(--pl-text);
+		font-size: 0.95em;
+		margin-top: 8px;
+	}
+	.col h3 .dot {
+		background: var(--who);
+	}
+	.col h3 b {
+		font-weight: 500;
+		color: var(--pl-muted);
+	}
+
+	/* Shopping list */
+	:host([view='shopping']) {
+		--pl-check: 26px;
+		--pl-row: 9px;
+	}
+	:host([view='shopping']) .name {
+		font-size: 1.1em;
+	}
+	:host([view='shopping']) .meta {
+		display: none;
+	}
+	h3 .grow {
+		flex: 1;
+	}
+	.clear {
+		padding: 4px 12px;
+		border: 1px solid var(--pl-line);
+		border-radius: 999px;
+		color: var(--pl-text);
+		font-weight: 500;
+	}
+
+	/* Person tiles */
+	:host([view='tiles']) .body {
+		padding: 0;
+		overflow: hidden;
+	}
+	.tiles {
+		display: flex;
+		height: 100%;
+		min-height: 52px;
+	}
+	.tile {
+		display: grid;
+		grid-template-columns: auto 1fr;
+		grid-template-rows: auto auto;
+		align-items: center;
+		align-content: center;
+		column-gap: 10px;
+		flex: 1;
+		min-width: 0;
+		padding: 6px 14px;
+		text-align: left;
+		border-left: 1px solid var(--pl-line);
+	}
+	.tile:first-child {
+		border-left: 0;
+	}
+	.tile:disabled {
+		cursor: default;
+	}
+	.tile .dot {
+		grid-row: 1 / 3;
+		width: 12px;
+		height: 12px;
+		background: var(--who);
+	}
+	.tile-name {
+		font-weight: 500;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.tile-counts {
+		color: var(--pl-muted);
+		font-size: 0.85em;
+		white-space: nowrap;
+	}
+	.tile-counts b {
+		font-weight: 600;
+		color: var(--pl-text);
+	}
+	.tile-counts b.late {
+		color: var(--pl-late);
+		margin-left: 6px;
+	}
+
 	.nav {
 		display: flex;
 		align-items: center;

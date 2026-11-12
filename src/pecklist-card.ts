@@ -1,6 +1,7 @@
 import { LitElement, type TemplateResult, html, nothing, svg } from 'lit';
 import {
 	DEFAULTS,
+	VIEWS,
 	type Group,
 	type PersonInfo,
 	type HeatDay,
@@ -17,10 +18,12 @@ import {
 	glance,
 	heatmap,
 	nest,
+	overdue,
 	parseTags,
 	people,
 	relativeDay,
 	todayIn,
+	week,
 } from './data';
 import './editor';
 import { icons, styles } from './styles';
@@ -122,9 +125,10 @@ export class PeckListCard extends LitElement {
 
 	setConfig(config: CardConfig): void {
 		if (!config || typeof config !== 'object') throw new Error('Invalid configuration');
-		if (config.view && !['glance', 'list', 'agenda', 'heatmap'].includes(config.view)) {
-			throw new Error(`Unknown view "${config.view}": use glance, list, agenda or heatmap`);
+		if (config.view && !(VIEWS as readonly string[]).includes(config.view)) {
+			throw new Error(`Unknown view "${config.view}": use ${VIEWS.join(', ')}`);
 		}
+		this.setAttribute('view', config.view ?? DEFAULTS.view);
 		this._config = config;
 		this.toggleAttribute('kiosk', !!config.kiosk);
 		this.setAttribute('density', config.density ?? DEFAULTS.density);
@@ -142,10 +146,15 @@ export class PeckListCard extends LitElement {
 	}
 
 	getCardSize(): number {
-		return this._config.view === 'heatmap' ? 7 : 5;
+		const view = this._config.view;
+		return view === 'heatmap' ? 7 : view === 'tiles' ? 1 : view === 'next' ? 3 : 5;
 	}
 
 	getGridOptions(): Record<string, number> {
+		const view = this._config.view;
+		if (view === 'tiles') return { columns: 12, min_columns: 3, rows: 1, min_rows: 1 };
+		if (view === 'next') return { columns: 12, min_columns: 6, rows: 3, min_rows: 2 };
+		if (view === 'week') return { columns: 12, min_columns: 9, rows: 4, min_rows: 2 };
 		return { columns: 12, min_columns: 6, rows: this._config.height ? Math.ceil(this._config.height / 56) + 1 : 6, min_rows: 3 };
 	}
 
@@ -396,7 +405,7 @@ export class PeckListCard extends LitElement {
 							${offline ? html`<span class="state">Server unreachable</span>` : nothing}
 						</header>`
 					: nothing}
-				${people.length > 1 || folded
+				${(people.length > 1 && view !== 'board' && view !== 'tiles') || (folded && view !== 'tiles')
 					? html`<div class="people" role="group" aria-label=${people.length > 1 ? 'People' : 'Actions'}>
 							${people.length > 1
 								? html`<button class="chip" aria-pressed=${person === null} @click=${() => (this._person = null)}>
@@ -428,18 +437,12 @@ export class PeckListCard extends LitElement {
 								: nothing}
 						</div>`
 					: nothing}
-				${this._renderAdd(folded && !this._addOpen)}
+				${view === 'tiles' ? nothing : this._renderAdd(folded && !this._addOpen)}
 				<div class="body" style=${height}>
 					${this._problem ? html`<div class="problem" role="alert">${this._problem}</div>` : nothing}
 					${loading
 						? html`<div class="empty">Loading…</div>`
-						: view === 'list'
-							? this._renderList(items, snapshots)
-							: view === 'agenda'
-								? this._renderGroups(agenda(items, this._today, config.days ?? DEFAULTS.days, this._language), true, false)
-								: view === 'heatmap'
-									? this._renderHeatmap(items)
-									: this._renderGlance(items)}
+						: this._renderView(view, items, snapshots, person)}
 				</div>
 				${this._draft ? this._renderDialog(this._draft) : nothing}
 			</ha-card>
@@ -477,6 +480,196 @@ export class PeckListCard extends LitElement {
 			</form>
 			${this._addError ? html`<div class="problem" role="alert">${this._addError}</div>` : nothing}
 		`;
+	}
+
+	private _renderView(view: string, items: Item[], snapshots: Snapshot[], person: string | null): TemplateResult {
+		const config = this._config;
+		switch (view) {
+			case 'list':
+				return this._renderList(items, snapshots);
+			case 'agenda':
+				return this._renderGroups(agenda(items, this._today, config.days ?? DEFAULTS.days, this._language), true, false);
+			case 'heatmap':
+				return this._renderHeatmap(items);
+			case 'week':
+				return this._renderWeek(items);
+			case 'next':
+				return this._renderNext(items);
+			case 'board':
+				return this._renderBoard(snapshots);
+			case 'shopping':
+				return this._renderShopping(snapshots, person);
+			case 'tiles':
+				return this._renderTiles(snapshots);
+			default:
+				return this._renderGlance(items);
+		}
+	}
+
+	/** Seven days in a row, a dot per open task in its person's color; a tap lists the day. */
+	private _renderWeek(items: Item[]): TemplateResult {
+		const language = this._language;
+		const today = this._today;
+		const days = week(items, today, 7);
+		const selected = days.some((d) => d.day === this._selected) ? this._selected! : today;
+		const people = this._person ? [] : this._people();
+		const color = (item: Item) =>
+			(people.length > 1 ? people.find((who) => item.owners.includes(who.entryId))?.color : undefined) ?? 'var(--pl-accent)';
+		const late = selected === today ? overdue(items, today) : [];
+		const shown = days.find((d) => d.day === selected)?.items ?? [];
+		return html`
+			<div class="week" role="group" aria-label="Days">
+				${days.map((d) => {
+					const open = d.items.filter((item) => item.open);
+					return html`<button
+						class="wday ${d.day === today ? 'today' : ''}"
+						aria-pressed=${d.day === selected}
+						aria-label=${`${formatDay(d.day, language, { weekday: 'long', month: 'long', day: 'numeric' })}: ${open.length} ${open.length === 1 ? 'task' : 'tasks'}`}
+						@click=${() => (this._selected = d.day)}
+					>
+						<span class="wd">${formatDay(d.day, language, { weekday: 'short' })}</span>
+						<b>${Number(d.day.slice(8))}</b>
+						<span class="dots">
+							${open.slice(0, 4).map((item) => html`<i style="background:${color(item)}"></i>`)}
+							${open.length > 4 ? html`<em>+${open.length - 4}</em>` : nothing}
+						</span>
+					</button>`;
+				})}
+			</div>
+			${late.length
+				? html`<h3 class="late">Overdue</h3>
+						<ul>
+							${late.map((item) => this._renderRow({ item, subtasks: [] }, true))}
+						</ul>`
+				: nothing}
+			<h3>${relativeDay(selected, today, language)} · ${formatDay(selected, language, { month: 'short', day: 'numeric' })}</h3>
+			${shown.length
+				? html`<ul>
+						${shown.map((item) => this._renderRow({ item, subtasks: [] }, true, false))}
+					</ul>`
+				: html`<div class="none-today">Nothing planned.</div>`}
+		`;
+	}
+
+	/** The one task to do next, large, with Done and Tomorrow. */
+	private _renderNext(items: Item[]): TemplateResult {
+		const today = this._today;
+		const summary = glance(items, today, this._config.days ?? DEFAULTS.days, 1);
+		const item = summary.next.find((each) => !this._pending.has(each.task.id)) ?? summary.next[0];
+		if (!item) return html`<div class="hero"><div class="hero-title done">All clear. Nothing open.</div></div>`;
+		const late = item.day !== null && item.day < today;
+		const due = summary.overdue.length + summary.today.length - (item.day !== null && item.day <= today ? 1 : 0);
+		const date = item.day
+			? relativeDay(item.day, today, this._language) + (item.time ? `, ${formatTime(item.time, this._language)}` : '')
+			: 'No date';
+		const busy = this._pending.has(item.task.id);
+		return html`
+			<div class="hero">
+				<div class="hero-when">
+					<span class=${late ? 'late' : ''}>${date}</span>
+					${item.list ? html`<span><i class="dot" style=${item.list.color ? `background:${item.list.color}` : ''}></i>${item.list.name}</span>` : nothing}
+					${item.others.map((name) => html`<span>@${name}</span>`)}
+				</div>
+				<button class="hero-title" ?disabled=${!item.canWrite} @click=${() => this._edit(item)}>${item.task.title}</button>
+				<div class="hero-actions">
+					<button class="btn primary" ?disabled=${!item.canWrite || busy} @click=${() => this._toggle(item)}>${icon(icons.check)} Done</button>
+					<button class="btn" ?disabled=${!item.canWrite || busy} @click=${() => this._postpone(item)}>Tomorrow</button>
+				</div>
+				${due > 0 ? html`<div class="hero-more">${due} more due</div>` : nothing}
+			</div>
+		`;
+	}
+
+	/** Put a task off to tomorrow, keeping its time of day. */
+	private async _postpone(item: Item): Promise<void> {
+		if (!item.canWrite || this._pending.has(item.task.id)) return;
+		this._pending = new Set(this._pending).add(item.task.id);
+		try {
+			await this._send('update', item, { task_id: item.task.id, changes: dateChange(item.task, addDays(this._today, 1), item.time) });
+		} catch (err) {
+			this._pending = new Set([...this._pending].filter((id) => id !== item.task.id));
+			this._problem = message(err);
+			setTimeout(() => (this._problem = ''), 6000);
+		}
+	}
+
+	/** A column per person: the tasks assigned to them, and the unassigned ones they can see. */
+	private _renderBoard(snapshots: Snapshot[]): TemplateResult {
+		const people = this._people();
+		return html`<div class="board">
+			${people.map((who) => {
+				const mine = collect(snapshots, this._config, people.length > 1 ? who.entryId : null);
+				return html`<section class="col" style="--who:${who.color}">
+					<h3><i class="dot"></i>${who.name} <b>${mine.filter((item) => item.open).length}</b></h3>
+					${mine.length
+						? html`<ul>
+								${mine.map((item) => this._renderRow({ item, subtasks: [] }, false, true, false))}
+							</ul>`
+						: html`<div class="none-today">Nothing open.</div>`}
+				</section>`;
+			})}
+		</div>`;
+	}
+
+	/** A list to work through in a shop: what is left on top, what is in the cart below, and a way to clear it. */
+	private _renderShopping(snapshots: Snapshot[], person: string | null): TemplateResult {
+		const all = collect(snapshots, { ...this._config, show_completed: true, sort: this._config.sort ?? 'manual' }, person);
+		const left = all.filter((item) => item.open);
+		const got = all.filter((item) => !item.open);
+		const clearable = got.filter((item) => item.canWrite);
+		return html`
+			${left.length ? this._renderList(left, snapshots) : html`<div class="empty">${got.length ? 'Everything is ticked off.' : 'Nothing on the list.'}</div>`}
+			${got.length
+				? html`<h3 class="got">
+							Done
+							<span class="grow"></span>
+							${clearable.length ? html`<button class="clear" @click=${() => this._clear(clearable)}>Clear ${clearable.length}</button>` : nothing}
+						</h3>
+						<ul>
+							${got.map((item) => this._renderRow({ item, subtasks: [] }, false))}
+						</ul>`
+				: nothing}
+		`;
+	}
+
+	/** Take ticked-off tasks off the list. They go to PeckList's trash, where they can be restored. */
+	private async _clear(items: Item[]): Promise<void> {
+		this._pending = new Set([...this._pending, ...items.map((item) => item.task.id)]);
+		try {
+			for (const item of items) await this._send('delete', item, { task_id: item.task.id });
+		} catch (err) {
+			this._problem = message(err);
+			setTimeout(() => (this._problem = ''), 6000);
+		} finally {
+			this._pending = new Set();
+		}
+	}
+
+	/** One small tile per person: what is due today and what is late. Sized like a dashboard tile. */
+	private _renderTiles(snapshots: Snapshot[]): TemplateResult {
+		const people = this._people();
+		const path = this._config.navigation_path;
+		return html`<div class="tiles">
+			${people.map((who) => {
+				const counts = glance(collect(snapshots, this._config, people.length > 1 ? who.entryId : null), this._today, this._config.days ?? DEFAULTS.days, 0);
+				const label = `${who.name}: ${counts.today.length} today, ${counts.overdue.length} overdue`;
+				return html`<button class="tile" style="--who:${who.color}" aria-label=${label} ?disabled=${!path} @click=${this._navigate}>
+					<i class="dot"></i>
+					<span class="tile-name">${who.name}</span>
+					<span class="tile-counts">
+						<b>${counts.today.length}</b> today
+						${counts.overdue.length ? html`<b class="late">${counts.overdue.length}</b> <span class="late">late</span>` : nothing}
+					</span>
+				</button>`;
+			})}
+		</div>`;
+	}
+
+	private _navigate(): void {
+		const path = this._config.navigation_path;
+		if (!path) return;
+		history.pushState(null, '', path);
+		window.dispatchEvent(new CustomEvent('location-changed', { bubbles: true, composed: true, detail: { replace: false } }));
 	}
 
 	private _renderGlance(items: Item[]): TemplateResult {
@@ -548,14 +741,14 @@ export class PeckListCard extends LitElement {
 		</div>`;
 	}
 
-	private _renderRow(row: Row, showList: boolean, showDay = true): TemplateResult {
+	private _renderRow(row: Row, showList: boolean, showDay = true, stripe = true): TemplateResult {
 		const { item } = row;
 		const { task } = item;
 		const pending = this._pending.has(task.id);
 		const closed = item.open === pending; // a pending toggle shows where it is going
 		const late = item.open && item.day !== null && item.day < this._today;
 		// On a combined card a stripe says whose task it is; one person's view needs none.
-		const everyone = this._person ? [] : this._people();
+		const everyone = this._person || !stripe ? [] : this._people();
 		const whose = everyone.length > 1 ? everyone.filter((who) => item.owners.includes(who.entryId)) : [];
 		// Under a day's heading the day is said already: only a time is news there.
 		const date = [

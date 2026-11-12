@@ -35,7 +35,7 @@ describe('the card', () => {
 		expect(customElements.get('pecklist-card')).toBe(PeckListCard);
 		expect((window as unknown as { customCards: { type: string }[] }).customCards.map((c) => c.type)).toContain('pecklist-card');
 		expect(PeckListCard.getConfigElement().localName).toBe('pecklist-card-editor');
-		expect(() => new PeckListCard().setConfig({ type: 'x', view: 'board' as never })).toThrow(/Unknown view/u);
+		expect(() => new PeckListCard().setConfig({ type: 'x', view: 'kanban' as never })).toThrow(/Unknown view/u);
 	});
 
 	it("shows the signed-in person's own account at a glance", async () => {
@@ -275,5 +275,84 @@ describe('the card', () => {
 			{ type: 'pecklist/task/update', entry_id: 'ben', task_id: 'h3', changes: { assignees: ['user:u-sam'] } },
 		]);
 		expect(text(row(root, 'Groceries'), '.meta .to')).toEqual(['@Sam']);
+	});
+	it('week strip: seven days with a dot per open task, and a tap lists the day', async () => {
+		const { card, root } = await mount({ view: 'week', entries: ['ben', 'sam'] });
+		const days = [...root.querySelectorAll('.wday')] as HTMLElement[];
+		expect(days).toHaveLength(7);
+		expect(days[0]!.getAttribute('aria-pressed')).toBe('true');
+		expect(days[0]!.classList.contains('today')).toBe(true);
+		// Today: Ben's dishwasher, Sam's bins and tulip bulbs, each dot in its person's color.
+		const dots = [...days[0]!.querySelectorAll('.dots i')] as HTMLElement[];
+		expect(dots).toHaveLength(3);
+		expect(new Set(dots.map((d) => d.style.background.toLowerCase()))).toEqual(new Set(['#4c8bf5', '#e0679a']));
+		// Today also shows what is overdue; another day shows only its own.
+		expect(text(root, 'h3')[0]).toBe('Overdue');
+		days[2]!.click();
+		await settle(card);
+		expect(text(root, 'h3')).toHaveLength(1);
+		expect(text(root, '.name')).toEqual(['Pay the water bill', 'Mow the lawn', 'Rake leaves', 'Replace furnace filter']);
+		// A busy day says how many more than it has dots for.
+		expect(days[2]!.querySelector('.dots em')).toBeNull();
+		expect(days[2]!.getAttribute('aria-label')).toMatch(/: 4 tasks$/u);
+	});
+
+	it('next up: the most pressing task, done or put off in one tap', async () => {
+		const { card, root, hass } = await mount({ view: 'next' });
+		expect(text(root, '.hero-title')).toEqual(['Book the plumber']);
+		expect(text(root, '.hero-more')).toEqual(['3 more due']);
+		const [done, tomorrow] = [...root.querySelectorAll('.hero-actions .btn')] as HTMLElement[];
+		tomorrow!.click();
+		await settle(card);
+		const moved = writes(hass)[0] as { type: string; changes: { due: { at: string } } };
+		expect(moved.type).toBe('pecklist/task/update');
+		expect(moved.changes.due.at > TODAY).toBe(true);
+		expect(text(root, '.hero-title')).toEqual(['Chart update']);
+		(root.querySelector('.hero-actions .btn.primary') as HTMLElement).click();
+		await settle(card);
+		expect(writes(hass)[1]).toEqual({ type: 'pecklist/task/complete', entry_id: 'ben', task_id: 'b6' });
+		expect(text(root, '.hero-title')).toEqual(['Take out the bins']);
+		expect(done).toBeTruthy();
+	});
+
+	it('family board: a column per person with their own tasks', async () => {
+		const { root } = await mount({ view: 'board', entries: ['ben', 'sam'], lists: ['household', 'garden'] });
+		expect(text(root, '.col h3')).toEqual(['Ben 4', 'Sam 6']);
+		const columns = [...root.querySelectorAll('.col')];
+		expect(text(columns[0]!, '.name')).toEqual(['Book the plumber', 'Groceries', 'Coffee beans', 'Milk']);
+		expect(text(columns[1]!, '.name')).toContain('Take out the bins');
+		// Columns say whose it is: no buttons and no stripes.
+		expect(root.querySelector('.people')).toBeNull();
+		expect(root.querySelector('.who')).toBeNull();
+	});
+
+	it('shopping list: ticked things drop to the bottom, and Clear takes them away', async () => {
+		const { card, root, hass } = await mount({ view: 'shopping', lists: ['chores'] });
+		expect(card.getAttribute('view')).toBe('shopping');
+		expect(text(root, 'h3')).toEqual(['Inside', 'Outside', 'Done Clear 1']);
+		(row(root, 'Rake leaves').querySelector('.check') as HTMLElement).click();
+		await settle(card);
+		expect(text(root, '.clear')).toEqual(['Clear 2']);
+		(root.querySelector('.clear') as HTMLElement).click();
+		await settle(card);
+		expect(writes(hass).slice(1).map((w) => [w.type, w.task_id]).sort()).toEqual([
+			['pecklist/task/delete', 'b10'],
+			['pecklist/task/delete', 'b8'],
+		]);
+		expect(root.querySelector('.clear')).toBeNull();
+		expect(text(root, '.name')).not.toContain('Rake leaves');
+	});
+
+	it('person tiles: counts per person, and a tap goes where the card says', async () => {
+		const { card, root } = await mount({ view: 'tiles', entries: ['ben', 'sam'], navigation_path: '/tasks/home', quick_add: true });
+		expect(text(root, '.tile')).toEqual(['Ben 1 today 2 late', 'Sam 2 today']);
+		expect(root.querySelector('.add')).toBeNull();
+		expect(root.querySelector('.people')).toBeNull();
+		expect(card.getGridOptions().rows).toBe(1);
+		const went = vi.fn();
+		window.addEventListener('location-changed', went);
+		(root.querySelector('.tile') as HTMLElement).click();
+		expect(went).toHaveBeenCalledOnce();
+		expect(location.pathname).toBe('/tasks/home');
 	});
 });

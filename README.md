@@ -31,6 +31,15 @@ By hand: put `pecklist-card.js` from the latest release in `config/www/`, and ad
 | **List** | One or more lists, grouped by section, with subtasks under their parent. |
 | **Agenda** | What is overdue, then today and the days ahead. |
 | **Busy-day heatmap** | A month, or a year of small months, shaded by how many tasks fall on each day. Tap a day to see its tasks. |
+| **Week strip** | Today and the six days after it in one row, a dot per open task in its person's color. Tap a day to list it; today also lists what is overdue. |
+| **Next up** | The one task to do next, large, with **Done** and **Tomorrow**. Made for a wall tablet or a small cell. |
+| **Family board** | A column per person, each with their own tasks. |
+| **Shopping list** | Big check rows by section, in the order you gave them in PeckList. Ticked things drop to **Done**, and **Clear** takes them off the list (into PeckList's trash). |
+| **Person tiles** | One dashboard-tile-sized cell per person: due today, and late. A tap can open another dashboard view. |
+
+![Week strip, next up and the family board](docs/screenshots/more-views.jpg)
+
+![Shopping list and person tiles](docs/screenshots/shopping-tiles.jpg)
 
 ![The heatmap, by month and by year](docs/screenshots/heatmap.jpg)
 
@@ -102,7 +111,7 @@ quick_add: true
 
 | Option | Default | |
 | --- | --- | --- |
-| `view` | `glance` | `glance`, `list`, `agenda` or `heatmap` |
+| `view` | `glance` | `glance`, `list`, `agenda`, `heatmap`, `week`, `next`, `board`, `shopping` or `tiles` |
 | `title` | none | A heading for the card |
 | `entries` | signed-in person, else everyone | Which people |
 | `scope` | `all` | `all`, `own` or `assigned` |
@@ -119,6 +128,7 @@ quick_add: true
 | `days` | `7` | At a glance and agenda: how far ahead to look |
 | `range` | `month` | Heatmap: `month` or `year` |
 | `height` | grows to fit | A fixed height in pixels; the tasks scroll |
+| `navigation_path` | none | Person tiles: where a tap goes, such as `/dashboard-tablet/tasks` |
 
 ### Fitting a dashboard
 
@@ -135,7 +145,8 @@ For a small cell, such as the space under other tiles in a section, use `density
 - the add box folds behind a **+** button until you want it;
 - in a narrow cell the list names give way to the task titles.
 
-About five rows show seven tasks. A card given a whole screen, across two or three sections, lays
+Person tiles take one row, next up two or three, and a week strip four. About five rows of a
+compact agenda show seven tasks. A card given a whole screen, across two or three sections, lays
 its groups out side by side instead of in one long column.
 
 ```yaml
