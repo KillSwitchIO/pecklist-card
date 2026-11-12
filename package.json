@@ -1,0 +1,24 @@
+{
+	"name": "pecklist-card",
+	"version": "0.1.0",
+	"description": "A Home Assistant dashboard card for PeckList tasks",
+	"license": "MIT",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"build": "node esbuild.config.mjs",
+		"dev": "node esbuild.config.mjs --watch",
+		"demo": "node esbuild.config.mjs --demo",
+		"lint": "tsc --noEmit",
+		"test": "vitest run"
+	},
+	"dependencies": {
+		"lit": "^3.3.0"
+	},
+	"devDependencies": {
+		"esbuild": "^0.25.0",
+		"happy-dom": "^18.0.0",
+		"typescript": "^5.8.0",
+		"vitest": "^3.2.0"
+	}
+}

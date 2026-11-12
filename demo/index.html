@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>PeckList card demo</title>
+		<style>
+			:root {
+				--primary-color: #03a9f4;
+				--primary-text-color: #212121;
+				--secondary-text-color: #727272;
+				--text-primary-color: #fff;
+				--divider-color: rgba(0, 0, 0, 0.12);
+				--card-background-color: #fff;
+				--error-color: #db4437;
+				--warning-color: #ffa600;
+				--info-color: #039be5;
+				--page: #f4f5f7;
+			}
+			:root[data-theme='dark'] {
+				--primary-text-color: #e1e1e1;
+				--secondary-text-color: #9b9b9b;
+				--divider-color: rgba(225, 225, 225, 0.12);
+				--card-background-color: #1c1c1c;
+				--page: #111;
+			}
+			body {
+				margin: 0;
+				padding: 16px;
+				background: var(--page);
+				color: var(--primary-text-color);
+				font-family: Roboto, 'Segoe UI', system-ui, sans-serif;
+			}
+			main {
+				display: grid;
+				grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr));
+				gap: 16px;
+				align-items: start;
+				max-width: 1280px;
+				margin: 0 auto;
+			}
+			ha-card {
+				background: var(--card-background-color);
+				border-radius: 12px;
+				border: 1px solid var(--divider-color);
+			}
+		</style>
+	</head>
+	<body>
+		<main id="cards"></main>
+		<script type="module" src="./demo.js"></script>
+	</body>
+</html>

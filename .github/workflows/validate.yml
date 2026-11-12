@@ -1,0 +1,22 @@
+# Runs on the GitHub mirror, where HACS installs from: HACS's own check of the repository. The
+# build and tests run on GitLab (.gitlab-ci.yml).
+name: Validate
+
+on:
+    push:
+        branches: [main]
+    schedule:
+        - cron: '23 5 * * 1'
+    workflow_dispatch:
+
+permissions:
+    contents: read
+
+jobs:
+    hacs:
+        if: github.repository == 'KillSwitchIO/pecklist-card'
+        runs-on: ubuntu-latest
+        steps:
+            - uses: hacs/action@main
+              with:
+                  category: plugin
