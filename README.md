@@ -37,7 +37,9 @@ By hand: put `pecklist-card.js` from the latest release in `config/www/`, and ad
 In every view:
 
 - tap the circle to complete a task, and again to reopen it. The circle's color is the priority;
-- tap a task to change its title, date, time, priority, tags and notes, or to delete it;
+- tap a task to change its title, date, time, priority, tags and notes, to assign it (in a shared
+  list), or to delete it;
+- a task assigned to someone who is not on the card says so: `@Sam`;
 - with **Show the add box**, type a line the way you would in PeckList:
   `Pay rent tomorrow 9am #bills !high`.
 
@@ -106,7 +108,7 @@ quick_add: true
 | `scope` | `all` | `all`, `own` or `assigned` |
 | `lists` | every list | Only these lists |
 | `tags` | every tag | Only tasks with these tags, or tags under them |
-| `sort` | `date` | `date`, `priority`, `title` or `created` |
+| `sort` | `date` | `date`, `priority`, `title`, `created`, or `manual` for the order you gave tasks in PeckList |
 | `density` | `comfortable` | or `compact` |
 | `colors` | `theme` | `theme` follows Home Assistant; `pecklist` uses PeckList's Forest palette |
 | `person_colors` | built in | A color per person, by integration entry id |

@@ -247,4 +247,33 @@ describe('the card', () => {
 		await settle(card);
 		expect(add().hidden).toBe(true);
 	});
+	it('names an assignee who is not on the card, and assigns from the dialog', async () => {
+		const { card, root, hass } = await mount({ view: 'list', lists: ['household', 'chores'] });
+		// Ben's own card: the bins are Sam's to take out.
+		expect(text(row(root, 'Take out the bins'), '.meta .to')).toEqual(['@Sam']);
+		expect(text(row(root, 'Book the plumber'), '.meta .to')).toEqual([]);
+
+		// A task in a shared list can be assigned; one in a list of your own has nobody to assign to.
+		(row(root, 'Mow the lawn').querySelector('.what') as HTMLElement).click();
+		await settle(card);
+		expect(root.querySelector('.assign')).toBeNull();
+		(root.querySelector('.scrim .btn:not(.danger):not(.primary)') as HTMLElement).click();
+		await settle(card);
+
+		(row(root, 'Groceries').querySelector('.what') as HTMLElement).click();
+		await settle(card);
+		const chips = [...root.querySelectorAll('.assign .chip')] as HTMLElement[];
+		expect(chips.map((c) => [c.textContent!.trim(), c.getAttribute('aria-pressed')])).toEqual([
+			['Me', 'false'],
+			['Sam', 'false'],
+		]);
+		chips[1]!.click();
+		await settle(card);
+		root.querySelector('.scrim form')!.dispatchEvent(new Event('submit', { cancelable: true }));
+		await settle(card);
+		expect(writes(hass)).toEqual([
+			{ type: 'pecklist/task/update', entry_id: 'ben', task_id: 'h3', changes: { assignees: ['user:u-sam'] } },
+		]);
+		expect(text(row(root, 'Groceries'), '.meta .to')).toEqual(['@Sam']);
+	});
 });

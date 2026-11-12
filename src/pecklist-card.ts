@@ -24,7 +24,7 @@ import {
 } from './data';
 import './editor';
 import { icons, styles } from './styles';
-import type { Accounts, CardConfig, HomeAssistant, Item, Snapshot } from './types';
+import type { Accounts, CardConfig, HomeAssistant, Item, PersonRef, Snapshot } from './types';
 
 const PRIORITIES = ['None', 'Low', 'Medium', 'High'];
 
@@ -36,6 +36,8 @@ interface Draft {
 	priority: number;
 	tags: string;
 	notes: string;
+	/** Ids of the assignees, when the task can be assigned from here; else null. */
+	assignees: string[] | null;
 	saving: boolean;
 	error: string;
 }
@@ -309,9 +311,15 @@ export class PeckListCard extends LitElement {
 			priority: item.task.priority,
 			tags: item.task.tags.join(', '),
 			notes: item.task.notes ?? '',
+			assignees: item.list?.shared && this._assignable(item).length > 1 ? [...item.task.assignees] : null,
 			saving: false,
 			error: '',
 		};
+	}
+
+	/** Who this task can be assigned to, through the account it is written with. */
+	private _assignable(item: Item): PersonRef[] {
+		return (this._snapshots.get(item.entryId)?.people ?? []).filter((p) => p.assignable);
 	}
 
 	private _set(change: Partial<Draft>): void {
@@ -332,6 +340,7 @@ export class PeckListCard extends LitElement {
 		if (draft.priority !== task.priority) changes.priority = draft.priority;
 		const tags = parseTags(draft.tags);
 		if (tags.join('\n') !== task.tags.join('\n')) changes.tags = tags;
+		if (draft.assignees && [...draft.assignees].sort().join() !== [...task.assignees].sort().join()) changes.assignees = draft.assignees;
 		const time = draft.day ? draft.time : '';
 		if (draft.day !== (draft.item.day ?? '') || time !== (draft.item.time ?? '')) {
 			Object.assign(changes, dateChange(task, draft.day || null, time || null));
@@ -581,6 +590,7 @@ export class PeckListCard extends LitElement {
 							${showList && item.list
 								? html`<span class="in"><i class="dot" style=${item.list.color ? `background:${item.list.color}` : ''}></i>${item.list.name}</span>`
 								: nothing}
+							${item.others.map((name) => html`<span class="to">@${name}</span>`)}
 							${task.tags.map((tag) => html`<span class="tag">#${tag}</span>`)}
 						</span>
 					</button>
@@ -698,6 +708,27 @@ export class PeckListCard extends LitElement {
 								</button>`,
 						)}
 					</div>
+					${draft.assignees
+						? html`<label id="assign">Assigned to</label>
+								<div class="assign" role="group" aria-labelledby="assign">
+									${this._assignable(draft.item).map(
+										(who) =>
+											html`<button
+												type="button"
+												class="chip"
+												aria-pressed=${draft.assignees!.includes(who.id)}
+												@click=${() =>
+													this._set({
+														assignees: draft.assignees!.includes(who.id)
+															? draft.assignees!.filter((id) => id !== who.id)
+															: [...draft.assignees!, who.id],
+													})}
+											>
+												${who.me ? 'Me' : who.name}
+											</button>`,
+									)}
+								</div>`
+						: nothing}
 					<label>
 						Tags
 						<input

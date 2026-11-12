@@ -74,6 +74,7 @@ export function schema(config: CardConfig, people: Option[], lists: Option[], ta
 			{ value: 'priority', label: 'Priority' },
 			{ value: 'title', label: 'Title' },
 			{ value: 'created', label: 'Newest first' },
+			{ value: 'manual', label: 'As in PeckList' },
 		]),
 		select('density', [
 			{ value: 'comfortable', label: 'Comfortable' },

@@ -594,6 +594,11 @@ export const styles = css`
 		border-color: var(--pl-accent);
 		box-shadow: inset 0 0 0 1px var(--pl-accent);
 	}
+	.assign {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 6px;
+	}
 	.actions {
 		display: flex;
 		gap: 8px;

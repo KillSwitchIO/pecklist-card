@@ -135,6 +135,14 @@ describe('collect', () => {
 		expect(collect(hass.people.map((p) => hass.snapshot(p)), card()).find((i) => i.task.id === 'h1')!.canWrite).toBe(false);
 	});
 
+	it('sorts as PeckList does, by the order key, with keyless tasks last', () => {
+		const hass = household(TODAY);
+		const ben = hass.people[0]!;
+		ben.tasks = [task('a', 'Third', 'chores', { order: 'c' }), task('b', 'No key', 'chores'), task('c', 'First', 'chores', { order: 'B' }), task('d', 'Second', 'chores', { order: 'a' })];
+		// Byte order, as the apps compare: capitals before small letters.
+		expect(titles(collect([hass.snapshot(ben)], card({ sort: 'manual' })))).toEqual(['First', 'Second', 'Third', 'No key']);
+	});
+
 	it('sorts by priority and by newest', () => {
 		expect(titles(collect(snapshots(), card({ sort: 'priority' }))).slice(0, 2)).toEqual(['Book the plumber', 'Renew medical certificate']);
 		const hass = household(TODAY);

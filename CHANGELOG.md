@@ -16,6 +16,8 @@ First version.
   groups side by side when the card is wide.
 - Which tasks: everything a person can see, only their own lists, or only what is assigned to them;
   by list and by tag.
+- Assign a task in a shared list from the edit dialog; assignees who are not on the card are named.
+- Sort as in PeckList, by the order you gave the tasks.
 - A visual editor; sorting, compact or comfortable spacing, completed tasks, a fixed height.
 - Colors follow the Home Assistant theme, or use PeckList's Forest palette.
 - A wall tablet layout: big touch targets, adding through Assist voice.

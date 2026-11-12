@@ -139,6 +139,12 @@ function compare(sort: string): (a: Item, b: Item) => number {
 		(a.day ?? '9999').localeCompare(b.day ?? '9999') || (a.time ?? '').localeCompare(b.time ?? '');
 	const priority = (a: Item, b: Item) => b.task.priority - a.task.priority;
 	const created = (a: Item, b: Item) => (b.task.createdAt ?? '').localeCompare(a.task.createdAt ?? '');
+	// The apps' order keys compare byte by byte; a task without one (an older server) goes last.
+	const manual = (a: Item, b: Item) => {
+		const x = a.task.order ?? '\uffff';
+		const y = b.task.order ?? '\uffff';
+		return x < y ? -1 : x > y ? 1 : 0;
+	};
 	const order =
 		sort === 'priority'
 			? [priority, date, text]
@@ -146,7 +152,9 @@ function compare(sort: string): (a: Item, b: Item) => number {
 				? [text, date]
 				: sort === 'created'
 					? [created, text]
-					: [date, priority, text];
+					: sort === 'manual'
+						? [manual, date, text]
+						: [date, priority, text];
 	return (a, b) => {
 		if (a.open !== b.open) return a.open ? -1 : 1;
 		for (const by of order) {
@@ -200,6 +208,7 @@ export function collect(snapshots: Snapshot[], config: CardConfig, person: strin
 				entryId: snapshot.account.entry_id,
 				seenBy: [snapshot.account.entry_id],
 				owners: [],
+				others: [],
 				list,
 				day,
 				time,
@@ -210,9 +219,11 @@ export function collect(snapshots: Snapshot[], config: CardConfig, person: strin
 	}
 	// Whose task it is: the shown people it is assigned to; unassigned, everyone who can see it.
 	const byUser = new Map(snapshots.map((s) => [`user:${s.account.user_id}`, s.account.entry_id]));
+	const names = new Map(snapshots.flatMap((s) => (s.people ?? []).map((p) => [p.id, p.name] as const)));
 	for (const item of byId.values()) {
 		const assigned = item.task.assignees.map((a) => byUser.get(a)).filter((id): id is string => !!id);
 		item.owners = assigned.length ? assigned : item.seenBy;
+		item.others = item.task.assignees.filter((a) => !byUser.has(a)).map((a) => names.get(a)).filter((n): n is string => !!n);
 	}
 	const items = person ? [...byId.values()].filter((item) => item.owners.includes(person)) : [...byId.values()];
 	return items.sort(compare(config.sort ?? DEFAULTS.sort));

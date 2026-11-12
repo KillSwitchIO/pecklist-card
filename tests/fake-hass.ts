@@ -79,6 +79,14 @@ export class FakeHass implements HomeAssistant {
 			lists: who.lists,
 			sections: who.sections,
 			tags: [...new Set(who.tasks.flatMap((t) => t.tags))].sort().map((name) => ({ id: name, name, color: null })),
+			people: this.people.map((p) => ({
+				id: `user:${p.account.user_id}`,
+				kind: 'user' as const,
+				name: p.account.name ?? p.account.username,
+				handle: p.account.username,
+				me: p === who,
+				assignable: true,
+			})),
 			tasks: who.tasks.map((t) => ({ ...t })),
 		};
 	}

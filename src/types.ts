@@ -25,6 +25,8 @@ export interface Task {
 	recurrence: string | null;
 	pinned?: boolean;
 	createdAt: string | null;
+	/** The apps' sort key within a list; absent on an older server. */
+	order?: string | null;
 }
 
 export interface List {
@@ -48,6 +50,16 @@ export interface Tag {
 	color: string | null;
 }
 
+/** Someone a task's assignees can name, as the server's /people answers. */
+export interface PersonRef {
+	id: string;
+	kind: 'user' | 'group';
+	name: string;
+	handle: string | null;
+	me: boolean;
+	assignable: boolean;
+}
+
 export interface Account {
 	entry_id: string;
 	title: string;
@@ -69,6 +81,8 @@ export interface Snapshot {
 	lists: List[];
 	sections: Section[];
 	tags: Tag[];
+	/** Absent with an older integration, empty with an older server. */
+	people?: PersonRef[];
 	tasks: Task[];
 }
 
@@ -80,7 +94,7 @@ export interface Accounts {
 
 export type View = 'glance' | 'list' | 'agenda' | 'heatmap';
 export type Scope = 'all' | 'own' | 'assigned';
-export type Sort = 'date' | 'priority' | 'title' | 'created';
+export type Sort = 'date' | 'priority' | 'title' | 'created' | 'manual';
 
 export interface CardConfig {
 	type: string;
@@ -118,6 +132,8 @@ export interface Item {
 	seenBy: string[];
 	/** Entry ids of whose task it is: the shown people it is assigned to, else everyone who sees it. */
 	owners: string[];
+	/** Names of assignees who are not people on this card (those have a stripe). */
+	others: string[];
 	list: List | null;
 	day: string | null;
 	time: string | null;
