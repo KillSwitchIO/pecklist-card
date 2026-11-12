@@ -110,16 +110,47 @@ describe('the card', () => {
 		expect(text(root, '.nav strong')[0]).not.toBe(label);
 	});
 
-	it('several people: one copy of a shared task, and chips to hide a person', async () => {
-		const { card, root, hass } = await mount({ entries: ['ben', 'sam'], view: 'list', lists: ['household', 'garden'] });
+	it('several people: combined with a color each, and a button per person', async () => {
+		const { card, root, hass } = await mount({
+			entries: ['ben', 'sam'],
+			view: 'list',
+			lists: ['household', 'garden'],
+			person_colors: { sam: '#123456' },
+		});
+		const whose = (title: string) => row(root, title).querySelector('.who');
+		const colors = (title: string) => [...whose(title)!.querySelectorAll('i')].map((i) => i.style.background.toLowerCase());
 		expect(hass.subscribers()).toBe(2);
-		expect(text(root, '.chip')).toEqual(['ben', 'sam']);
+		// Each button counts that person's open tasks.
+		expect(text(root, '.chip')).toEqual(['All 7', 'Ben 4', 'Sam 6']);
+		expect(root.querySelector('.chip')!.getAttribute('aria-pressed')).toBe('true');
 		expect(text(root, '.name').filter((n) => n === 'Take out the bins')).toHaveLength(1);
-		expect(text(row(root, 'Take out the bins'), '.meta span').at(-1)).toBe('ben, sam');
 		expect(text(root, 'h3')).toEqual(['Household', 'Garden']);
+		// A stripe says whose task it is: the person it is assigned to, else everyone who can see it.
+		expect(whose('Take out the bins')!.getAttribute('aria-label')).toBe('Sam');
+		expect(whose('Book the plumber')!.getAttribute('aria-label')).toBe('Ben');
+		expect(whose('Groceries')!.getAttribute('aria-label')).toBe('Ben, Sam');
+		expect(colors('Groceries')).toEqual(['#4c8bf5', '#123456']);
+
+		// Ben's button: only his, with no stripes to read.
 		(root.querySelectorAll('.chip')[1] as HTMLElement).click();
 		await settle(card);
 		expect(text(root, 'h3')).toEqual(['Household']);
+		expect(text(root, '.name')).toEqual(['Book the plumber', 'Groceries', 'Coffee beans', 'Milk']);
+		expect(root.querySelector('.who')).toBeNull();
+		// Tapping it again goes back to everyone.
+		(root.querySelectorAll('.chip')[1] as HTMLElement).click();
+		await settle(card);
+		expect(text(root, 'h3')).toEqual(['Household', 'Garden']);
+	});
+
+	it("one person's button also narrows where quick add can put a task", async () => {
+		const { card, root } = await mount({ entries: ['ben', 'sam'], quick_add: true, lists: ['chores', 'garden'] });
+		const options = () => [...root.querySelectorAll('.add option')].map((o) => o.textContent);
+		expect(options()).toEqual(['ben: Chores', 'sam: Garden']);
+		(root.querySelectorAll('.chip')[2] as HTMLElement).click();
+		await settle(card);
+		expect(options()).toEqual(['Garden']);
+		expect((root.querySelector('.add select') as HTMLSelectElement).hidden).toBe(true); // one place: no choice to make
 	});
 
 	it('quick add sends the line to the list the card is about', async () => {
@@ -199,5 +230,21 @@ describe('the card', () => {
 		hass.callWS = () => Promise.reject({ code: 'unknown_command', message: 'Unknown command.' });
 		const { root } = await mount({}, hass);
 		expect(text(root, '.problem')[0]).toMatch(/integration is not set up/u);
+	});
+	it('a compact card folds the add box behind a + button', async () => {
+		const { card, root } = await mount({ quick_add: true, density: 'compact', lists: ['chores'] });
+		const add = () => root.querySelector('.add') as HTMLFormElement;
+		expect(add().hidden).toBe(true);
+		// One person: no person buttons, only the +.
+		expect(root.querySelectorAll('.chip')).toHaveLength(1);
+		const plus = root.querySelector('.chip.plus') as HTMLElement;
+		expect(plus.getAttribute('aria-expanded')).toBe('false');
+		plus.click();
+		await settle(card);
+		expect(plus.getAttribute('aria-expanded')).toBe('true');
+		expect(add().hidden).toBe(false);
+		plus.click();
+		await settle(card);
+		expect(add().hidden).toBe(true);
 	});
 });

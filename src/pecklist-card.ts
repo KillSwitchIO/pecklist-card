@@ -2,6 +2,7 @@ import { LitElement, type TemplateResult, html, nothing, svg } from 'lit';
 import {
 	DEFAULTS,
 	type Group,
+	type PersonInfo,
 	type HeatDay,
 	type Row,
 	addDays,
@@ -17,12 +18,13 @@ import {
 	heatmap,
 	nest,
 	parseTags,
+	people,
 	relativeDay,
 	todayIn,
 } from './data';
 import './editor';
 import { icons, styles } from './styles';
-import type { Account, Accounts, CardConfig, HomeAssistant, Item, Snapshot } from './types';
+import type { Accounts, CardConfig, HomeAssistant, Item, Snapshot } from './types';
 
 const PRIORITIES = ['None', 'Low', 'Medium', 'High'];
 
@@ -55,13 +57,14 @@ export class PeckListCard extends LitElement {
 		_accounts: { state: true },
 		_snapshots: { state: true },
 		_problem: { state: true },
-		_hidden: { state: true },
+		_person: { state: true },
 		_pending: { state: true },
 		_draft: { state: true },
 		_anchor: { state: true },
 		_selected: { state: true },
 		_filter: { state: true },
 		_adding: { state: true },
+		_addOpen: { state: true },
 		_addError: { state: true },
 		_today: { state: true },
 	};
@@ -70,13 +73,14 @@ export class PeckListCard extends LitElement {
 	declare _accounts: Accounts | null;
 	declare _snapshots: Map<string, Snapshot>;
 	declare _problem: string;
-	declare _hidden: Set<string>;
+	declare _person: string | null;
 	declare _pending: Set<string>;
 	declare _draft: Draft | null;
 	declare _anchor: string | null;
 	declare _selected: string | null;
 	declare _filter: 'overdue' | 'today' | 'upcoming' | null;
 	declare _adding: boolean;
+	declare _addOpen: boolean;
 	declare _addError: string;
 	declare _today: string;
 
@@ -92,13 +96,14 @@ export class PeckListCard extends LitElement {
 		this._accounts = null;
 		this._snapshots = new Map();
 		this._problem = '';
-		this._hidden = new Set();
+		this._person = null;
 		this._pending = new Set();
 		this._draft = null;
 		this._anchor = null;
 		this._selected = null;
 		this._filter = null;
 		this._adding = false;
+		this._addOpen = false;
 		this._addError = '';
 		this._today = todayIn(undefined);
 	}
@@ -216,14 +221,13 @@ export class PeckListCard extends LitElement {
 		return this._wanted
 			.split(',')
 			.map((id) => this._snapshots.get(id))
-			.filter((s): s is Snapshot => !!s && !this._hidden.has(s.account.entry_id));
+			.filter((s): s is Snapshot => !!s);
 	}
 
-	private _people(): Account[] {
-		return this._wanted
-			.split(',')
-			.map((id) => this._snapshots.get(id)?.account)
-			.filter((a): a is Account => !!a);
+	/** The people on this card, each with a name and a color. */
+	private _people(): PersonInfo[] {
+		const loaded = this._wanted.split(',').filter((id) => this._snapshots.has(id));
+		return people(this._accounts?.accounts ?? [], loaded, this._config.person_colors);
 	}
 
 	private async _send(type: string, item: { entryId: string }, data: Record<string, unknown>): Promise<unknown> {
@@ -269,7 +273,7 @@ export class PeckListCard extends LitElement {
 	/** Where quick add can put a task: each shown person's default list and the lists they may change (only the card's own, when it names some). */
 	private _addTargets(): { value: string; label: string }[] {
 		const wanted = new Set(this._config.lists ?? []);
-		const snapshots = this._shown().filter((s) => s.account.can_write);
+		const snapshots = this._shown().filter((s) => s.account.can_write && (!this._person || s.account.entry_id === this._person));
 		const targets: { value: string; label: string }[] = [];
 		for (const snapshot of snapshots) {
 			const who = snapshots.length > 1 ? `${snapshot.account.username}: ` : '';
@@ -366,7 +370,14 @@ export class PeckListCard extends LitElement {
 		const snapshots = this._shown();
 		const loading = !this._problem && !!this._wanted && this._snapshots.size === 0;
 		const offline = snapshots.some((s) => !s.connected);
-		const items = collect(snapshots, config);
+		// One person's button narrows everything below to their tasks.
+		const person = people.some((p) => p.entryId === this._person) ? this._person : null;
+		const all = people.length > 1 ? collect(snapshots, config) : [];
+		const items = collect(snapshots, config, person);
+		const open = (id: string) => all.filter((item) => item.open && item.owners.includes(id)).length;
+		// A compact card keeps the add box folded behind a + button: a section cell has little height.
+		const folded =
+			!!config.quick_add && !config.kiosk && (config.density ?? DEFAULTS.density) === 'compact' && this._addTargets().length > 0;
 		const height = config.height ? `max-height:${config.height}px` : '';
 		return html`
 			<ha-card>
@@ -376,21 +387,39 @@ export class PeckListCard extends LitElement {
 							${offline ? html`<span class="state">Server unreachable</span>` : nothing}
 						</header>`
 					: nothing}
-				${people.length > 1
-					? html`<div class="people" role="group" aria-label="People">
-							${people.map(
-								(person) =>
+				${people.length > 1 || folded
+					? html`<div class="people" role="group" aria-label=${people.length > 1 ? 'People' : 'Actions'}>
+							${people.length > 1
+								? html`<button class="chip" aria-pressed=${person === null} @click=${() => (this._person = null)}>
+										All <b>${all.filter((item) => item.open).length}</b>
+									</button>`
+								: nothing}
+							${(people.length > 1 ? people : []).map(
+								(who) =>
 									html`<button
 										class="chip"
-										aria-pressed=${!this._hidden.has(person.entry_id)}
-										@click=${() => this._togglePerson(person.entry_id)}
+										style="--who:${who.color}"
+										aria-pressed=${person === who.entryId}
+										@click=${() => (this._person = person === who.entryId ? null : who.entryId)}
 									>
-										${person.username}
+										<i class="dot"></i>${who.name} <b>${open(who.entryId)}</b>
 									</button>`,
 							)}
+							${folded
+								? html`<span class="grow"></span
+										><button
+											class="chip plus"
+											aria-label="Add a task"
+											title="Add a task"
+											aria-expanded=${this._addOpen}
+											@click=${this._toggleAdd}
+										>
+											${icon(icons.plus)}
+										</button>`
+								: nothing}
 						</div>`
 					: nothing}
-				${this._renderAdd()}
+				${this._renderAdd(folded && !this._addOpen)}
 				<div class="body" style=${height}>
 					${this._problem ? html`<div class="problem" role="alert">${this._problem}</div>` : nothing}
 					${loading
@@ -408,14 +437,14 @@ export class PeckListCard extends LitElement {
 		`;
 	}
 
-	private _togglePerson(id: string): void {
-		const hidden = new Set(this._hidden);
-		if (hidden.has(id)) hidden.delete(id);
-		else hidden.add(id);
-		this._hidden = hidden;
+	private async _toggleAdd(): Promise<void> {
+		this._addOpen = !this._addOpen;
+		this._addError = '';
+		await this.updateComplete;
+		if (this._addOpen) (this.renderRoot.querySelector('.add input') as HTMLInputElement | null)?.focus();
 	}
 
-	private _renderAdd(): TemplateResult | typeof nothing {
+	private _renderAdd(hidden = false): TemplateResult | typeof nothing {
 		if (!this._config.quick_add) return nothing;
 		const targets = this._addTargets();
 		if (!targets.length) return nothing;
@@ -423,7 +452,7 @@ export class PeckListCard extends LitElement {
 			return html`<button class="voice" @click=${this._assist}>${icon(icons.mic)} Add a task</button>`;
 		}
 		return html`
-			<form class="add" @submit=${this._add}>
+			<form class="add" ?hidden=${hidden} @submit=${this._add}>
 				${icon(icons.plus)}
 				<input
 					type="text"
@@ -433,11 +462,9 @@ export class PeckListCard extends LitElement {
 					placeholder="Add a task: tomorrow 9am #tag !high"
 					?disabled=${this._adding}
 				/>
-				${targets.length > 1
-					? html`<select aria-label="List">
-							${targets.map((t) => html`<option value=${t.value}>${t.label}</option>`)}
-						</select>`
-					: nothing}
+				<select aria-label="List" ?hidden=${targets.length < 2}>
+					${targets.map((t) => html`<option value=${t.value}>${t.label}</option>`)}
+				</select>
 			</form>
 			${this._addError ? html`<div class="problem" role="alert">${this._addError}</div>` : nothing}
 		`;
@@ -468,9 +495,18 @@ export class PeckListCard extends LitElement {
 	}
 
 	private _renderList(items: Item[], snapshots: Snapshot[]): TemplateResult {
+		// Two people each have an Inbox: lists that share a name say whose they are.
+		const names = this._people();
+		const lists = snapshots.flatMap((s) => {
+			const who = names.find((p) => p.entryId === s.account.entry_id)?.name ?? s.account.username;
+			return s.lists.map((list) => ({ list, who }));
+		});
+		const named = lists.map(({ list, who }) =>
+			lists.some((other) => other.list.id !== list.id && other.list.name === list.name) ? { ...list, name: `${list.name} (${who})` } : list,
+		);
 		const groups = byList(
 			items,
-			snapshots.flatMap((s) => s.lists),
+			named,
 			snapshots.flatMap((s) => s.sections),
 		);
 		if (groups.length === 1 && !groups[0]!.key.split('/')[1] && this._config.lists?.length === 1) {
@@ -486,8 +522,9 @@ export class PeckListCard extends LitElement {
 
 	private _renderGroups(groups: Group[], showList: boolean, showDay = true): TemplateResult {
 		if (!groups.some((group) => group.rows.length)) return html`<div class="empty">Nothing to do here.</div>`;
-		return html`${groups.map(
-			(group) => html`
+		return html`<div class="groups">
+			${groups.map(
+				(group) => html`<section>
 				<h3 class=${group.late ? 'late' : ''}>
 					${group.color !== undefined ? html`<i class="dot" style=${group.color ? `background:${group.color}` : ''}></i>` : nothing}
 					${group.label}
@@ -497,8 +534,9 @@ export class PeckListCard extends LitElement {
 							${group.rows.map((row) => this._renderRow(row, showList, showDay))}
 						</ul>`
 					: html`<div class="none-today">Nothing planned.</div>`}
-			`,
-		)}`;
+				</section>`,
+			)}
+		</div>`;
 	}
 
 	private _renderRow(row: Row, showList: boolean, showDay = true): TemplateResult {
@@ -507,7 +545,9 @@ export class PeckListCard extends LitElement {
 		const pending = this._pending.has(task.id);
 		const closed = item.open === pending; // a pending toggle shows where it is going
 		const late = item.open && item.day !== null && item.day < this._today;
-		const several = this._people().length > 1;
+		// On a combined card a stripe says whose task it is; one person's view needs none.
+		const everyone = this._person ? [] : this._people();
+		const whose = everyone.length > 1 ? everyone.filter((who) => item.owners.includes(who.entryId)) : [];
 		// Under a day's heading the day is said already: only a time is news there.
 		const date = [
 			item.day && (showDay || late) ? relativeDay(item.day, this._today, this._language) : '',
@@ -518,6 +558,11 @@ export class PeckListCard extends LitElement {
 		return html`
 			<li>
 				<div class="row">
+					${whose.length
+						? html`<span class="who" role="img" aria-label=${whose.map((who) => who.name).join(', ')} title=${whose.map((who) => who.name).join(', ')}>
+								${whose.map((who) => html`<i style="background:${who.color}"></i>`)}
+							</span>`
+						: nothing}
 					<button
 						class="check p${task.priority} ${closed ? 'closed' : ''}"
 						role="checkbox"
@@ -534,10 +579,9 @@ export class PeckListCard extends LitElement {
 							${date ? html`<span class=${late ? 'late' : ''}>${date}</span>` : nothing}
 							${task.recurrence ? html`<span title="Repeats">${icon(icons.repeat)}</span>` : nothing}
 							${showList && item.list
-								? html`<span><i class="dot" style=${item.list.color ? `background:${item.list.color}` : ''}></i>${item.list.name}</span>`
+								? html`<span class="in"><i class="dot" style=${item.list.color ? `background:${item.list.color}` : ''}></i>${item.list.name}</span>`
 								: nothing}
-							${task.tags.map((tag) => html`<span>#${tag}</span>`)}
-							${several ? html`<span>${item.people.join(', ')}</span>` : nothing}
+							${task.tags.map((tag) => html`<span class="tag">#${tag}</span>`)}
 						</span>
 					</button>
 				</div>

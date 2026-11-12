@@ -1,6 +1,6 @@
 // Turning snapshots into what each view shows. No DOM and no Home Assistant here, so it tests plainly.
 
-import type { CardConfig, Item, List, Section, Snapshot, Task, TaskDate } from './types';
+import type { Account, CardConfig, Item, List, Section, Snapshot, Task, TaskDate } from './types';
 
 export const DEFAULTS = {
 	view: 'glance',
@@ -12,6 +12,31 @@ export const DEFAULTS = {
 	days: 7,
 	range: 'month',
 } as const;
+
+/** Colors for people, in the order their accounts were connected. Chosen to stay apart in light and dark. */
+export const PERSON_COLORS = ['#4C8BF5', '#E0679A', '#E3A23B', '#3BA99C', '#9A6FE0', '#7BA23F', '#D9776B', '#5E6AD2'];
+
+export interface PersonInfo {
+	entryId: string;
+	name: string;
+	color: string;
+}
+
+/** Each account as a person: a display name and a color that stays the same on every card. */
+export function people(accounts: Account[], shown: string[], overrides: Record<string, string> = {}): PersonInfo[] {
+	return shown
+		.map((id) => {
+			const index = accounts.findIndex((account) => account.entry_id === id);
+			const account = accounts[index];
+			if (!account) return null;
+			return {
+				entryId: id,
+				name: account.name || account.username || account.title,
+				color: overrides[id] ?? PERSON_COLORS[index % PERSON_COLORS.length]!,
+			};
+		})
+		.filter((person): person is PersonInfo => person !== null);
+}
 
 // Days, as YYYY-MM-DD strings. Kept as strings so no time zone can shift them.
 
@@ -135,8 +160,10 @@ function compare(sort: string): (a: Item, b: Item) => number {
 /**
  * Every task the card shows, from the chosen people's snapshots. A task several people can see (a
  * shared list) comes once, written through the first account that may change it.
+ *
+ * `person` narrows it to one person's tasks: those assigned to them, and unassigned ones they can see.
  */
-export function collect(snapshots: Snapshot[], config: CardConfig): Item[] {
+export function collect(snapshots: Snapshot[], config: CardConfig, person: string | null = null): Item[] {
 	const byId = new Map<string, Item>();
 	const wantLists = new Set(config.lists ?? []);
 	const wantTags = (config.tags ?? []).map((t) => t.toLowerCase());
@@ -160,7 +187,7 @@ export function collect(snapshots: Snapshot[], config: CardConfig): Item[] {
 			const canWrite = snapshot.account.can_write && (list.role === 'owner' || list.role === 'editor');
 			const seen = byId.get(task.id);
 			if (seen) {
-				seen.people.push(snapshot.account.username);
+				seen.seenBy.push(snapshot.account.entry_id);
 				if (!seen.canWrite && canWrite) {
 					seen.entryId = snapshot.account.entry_id;
 					seen.canWrite = true;
@@ -171,7 +198,8 @@ export function collect(snapshots: Snapshot[], config: CardConfig): Item[] {
 			byId.set(task.id, {
 				task,
 				entryId: snapshot.account.entry_id,
-				people: [snapshot.account.username],
+				seenBy: [snapshot.account.entry_id],
+				owners: [],
 				list,
 				day,
 				time,
@@ -180,7 +208,14 @@ export function collect(snapshots: Snapshot[], config: CardConfig): Item[] {
 			});
 		}
 	}
-	return [...byId.values()].sort(compare(config.sort ?? DEFAULTS.sort));
+	// Whose task it is: the shown people it is assigned to; unassigned, everyone who can see it.
+	const byUser = new Map(snapshots.map((s) => [`user:${s.account.user_id}`, s.account.entry_id]));
+	for (const item of byId.values()) {
+		const assigned = item.task.assignees.map((a) => byUser.get(a)).filter((id): id is string => !!id);
+		item.owners = assigned.length ? assigned : item.seenBy;
+	}
+	const items = person ? [...byId.values()].filter((item) => item.owners.includes(person)) : [...byId.values()];
+	return items.sort(compare(config.sort ?? DEFAULTS.sort));
 }
 
 export interface Glance {

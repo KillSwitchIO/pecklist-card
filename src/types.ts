@@ -52,6 +52,8 @@ export interface Account {
 	entry_id: string;
 	title: string;
 	username: string;
+	/** The Home Assistant user's name when the account is matched to one, else the username. */
+	name?: string;
 	user_id: string;
 	can_write: boolean;
 	ha_user: string | null;
@@ -96,6 +98,8 @@ export interface CardConfig {
 	/** Wall tablet layout: big touch targets, nothing that needs a keyboard. */
 	kiosk?: boolean;
 	colors?: 'theme' | 'pecklist';
+	/** A color per person, by config entry id: overrides the built-in ones. */
+	person_colors?: Record<string, string>;
 	/** At a glance: how many next tasks to list. */
 	max_items?: number;
 	/** Agenda: today and this many days after it. */
@@ -110,8 +114,10 @@ export interface CardConfig {
 export interface Item {
 	task: Task;
 	entryId: string;
-	/** Usernames of every shown account that can see this task. */
-	people: string[];
+	/** Entry ids of every shown account that can see this task. */
+	seenBy: string[];
+	/** Entry ids of whose task it is: the shown people it is assigned to, else everyone who sees it. */
+	owners: string[];
 	list: List | null;
 	day: string | null;
 	time: string | null;

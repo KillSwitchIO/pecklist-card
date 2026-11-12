@@ -119,7 +119,8 @@ describe('collect', () => {
 		const items = collect(snapshots(['ben', 'sam']), card());
 		const bins = items.filter((i) => i.task.id === 'h1');
 		expect(bins).toHaveLength(1);
-		expect(bins[0]!.people).toEqual(['ben', 'sam']);
+		expect(bins[0]!.seenBy).toEqual(['ben', 'sam']);
+		expect(bins[0]!.owners).toEqual(['sam']); // assigned to Sam
 		expect(items.find((i) => i.task.id === 's1')!.entryId).toBe('sam');
 	});
 

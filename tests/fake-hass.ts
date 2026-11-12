@@ -38,7 +38,16 @@ export interface Person {
 
 export function person(entryId: string, username: string, extra: Partial<Account> = {}): Person {
 	return {
-		account: { entry_id: entryId, title: username, username, user_id: `u-${username}`, can_write: true, ha_user: null, ...extra },
+		account: {
+			entry_id: entryId,
+			title: username,
+			username,
+			name: username.charAt(0).toUpperCase() + username.slice(1),
+			user_id: `u-${username}`,
+			can_write: true,
+			ha_user: null,
+			...extra,
+		},
 		lists: [],
 		sections: [],
 		tasks: [],

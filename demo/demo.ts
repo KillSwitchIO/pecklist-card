@@ -29,6 +29,7 @@ const cards: Partial<CardConfig>[] = [
 	{ view: 'heatmap', title: 'The year', range: 'year', colors: 'pecklist' },
 	{ view: 'list', title: 'Everything', density: 'compact', colors: 'pecklist', entries: ['ben', 'sam'] },
 	{ view: 'glance', title: 'Kitchen tablet', kiosk: true, quick_add: true, colors: 'pecklist', entries: ['ben', 'sam'], max_items: 4 },
+	{ view: 'agenda', density: 'compact', days: 2, entries: ['ben', 'sam'], quick_add: true, height: 300 },
 ];
 const only = params.get('only');
 const main = document.getElementById('cards')!;

@@ -46,8 +46,27 @@ Lists you may only view are shown but cannot be changed.
 ## Several people
 
 Each person connects their own PeckList account in the integration. A card can show one person,
-some, or everyone: with more than one, a row of names lets you hide a person with a tap, and a task
-in a shared list shows once.
+some, or everyone together.
+
+![A combined card: a color per person, a button per person](docs/screenshots/combined.jpg)
+
+With more than one person on a card:
+
+- every person has a **color**, and a stripe at the left of each task says whose it is: the person
+  it is assigned to, or everyone who can see it when nobody is assigned. A task in a shared list
+  shows once, with a stripe in both colors;
+- a row of **buttons**, **All** and one per person, each with that person's open count. Tap a name
+  to see only their tasks; tap it again, or **All**, to go back;
+- two lists with the same name (everyone has an Inbox) say whose they are.
+
+Names come from Home Assistant when the account is matched to a user there, otherwise from
+PeckList. Colors are given in the order the accounts were connected, the same on every card; to
+choose your own, set `person_colors` in YAML with the integration entry's id:
+
+```yaml
+person_colors:
+  01JC8R4V0ZB8Q4D9C2M7K1XJ5E: '#4C8BF5'
+```
 
 **Which tasks** decides what "their tasks" means:
 
@@ -90,6 +109,7 @@ quick_add: true
 | `sort` | `date` | `date`, `priority`, `title` or `created` |
 | `density` | `comfortable` | or `compact` |
 | `colors` | `theme` | `theme` follows Home Assistant; `pecklist` uses PeckList's Forest palette |
+| `person_colors` | built in | A color per person, by integration entry id |
 | `show_completed` | `false` | Also show recently completed tasks |
 | `quick_add` | `false` | Show the add box |
 | `kiosk` | `false` | Wall tablet layout |
@@ -97,6 +117,35 @@ quick_add: true
 | `days` | `7` | At a glance and agenda: how far ahead to look |
 | `range` | `month` | Heatmap: `month` or `year` |
 | `height` | grows to fit | A fixed height in pixels; the tasks scroll |
+
+### Fitting a dashboard
+
+![The card in one section of a three-column tablet dashboard](docs/screenshots/tablet-home.jpg)
+
+Home Assistant's sections views give a card a cell: 12 columns wide inside its section, and rows
+of about 56 pixels. The card fills whatever cell you give it (drag its corner in the dashboard
+editor, or set `grid_options`), keeps its buttons in place, and scrolls its tasks inside.
+
+For a small cell, such as the space under other tiles in a section, use `density: compact`:
+
+- each task is one line, with its date and list at the right;
+- the counts of the at-a-glance view shrink to one row;
+- the add box folds behind a **+** button until you want it;
+- in a narrow cell the list names give way to the task titles.
+
+About five rows show seven tasks. A card given a whole screen, across two or three sections, lays
+its groups out side by side instead of in one long column.
+
+```yaml
+type: custom:pecklist-card
+view: agenda
+density: compact
+days: 2
+quick_add: true
+grid_options:
+  columns: full
+  rows: 5
+```
 
 ### Wall tablet
 

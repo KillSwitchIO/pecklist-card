@@ -16,6 +16,7 @@ export const styles = css`
 		--pl-check: 22px;
 		--pl-font: 14px;
 		display: block;
+		height: 100%;
 	}
 	:host([colors='pecklist']) {
 		--pl-accent: #5a8a4e;
@@ -36,6 +37,7 @@ export const styles = css`
 		--pl-font: 19px;
 	}
 	ha-card {
+		container-type: inline-size;
 		display: flex;
 		flex-direction: column;
 		height: 100%;
@@ -89,23 +91,73 @@ export const styles = css`
 	.people {
 		display: flex;
 		flex-wrap: wrap;
+		align-items: center;
 		gap: 6px;
-		padding: 2px 16px 6px;
+		padding: 10px 12px 6px;
+	}
+	header + .people {
+		padding-top: 2px;
 	}
 	.chip {
-		padding: 3px 10px;
+		--who: var(--pl-accent);
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		min-height: 32px;
+		padding: 0 12px;
 		border: 1px solid var(--pl-line);
 		border-radius: 999px;
-		font-size: 0.85em;
+		font-size: 0.9em;
+		color: var(--pl-text);
+		white-space: nowrap;
+	}
+	.chip b {
+		font-weight: 500;
 		color: var(--pl-muted);
 	}
+	.chip .dot {
+		background: var(--who);
+	}
 	:host([kiosk]) .chip {
-		padding: 8px 16px;
+		min-height: 48px;
+		padding: 0 18px;
 	}
 	.chip[aria-pressed='true'] {
-		background: var(--pl-accent);
+		border-color: var(--who);
+		background: color-mix(in srgb, var(--who) 18%, transparent);
+		box-shadow: inset 0 0 0 1px var(--who);
+	}
+	.chip[aria-pressed='true'] b {
+		color: inherit;
+	}
+	.people .grow {
+		flex: 1;
+	}
+	.chip.plus {
+		justify-content: center;
+		width: 32px;
+		padding: 0;
+		color: var(--pl-muted);
+	}
+	:host([kiosk]) .chip.plus {
+		width: 48px;
+	}
+	.chip.plus[aria-expanded='true'] {
 		border-color: var(--pl-accent);
-		color: var(--text-primary-color, #fff);
+		color: var(--pl-accent);
+	}
+	.who {
+		display: flex;
+		flex-direction: column;
+		align-self: stretch;
+		width: 4px;
+		margin: 1px -4px 1px 0;
+		border-radius: 2px;
+		overflow: hidden;
+		flex: none;
+	}
+	.who i {
+		flex: 1;
 	}
 
 	.add {
@@ -117,6 +169,10 @@ export const styles = css`
 		border: 1px solid var(--pl-line);
 		border-radius: 10px;
 		color: var(--pl-muted);
+	}
+	.add[hidden],
+	.add select[hidden] {
+		display: none;
 	}
 	.add:focus-within {
 		border-color: var(--pl-accent);
@@ -314,6 +370,69 @@ export const styles = css`
 	.meta svg {
 		width: 1em;
 		height: 1em;
+	}
+
+	/* Dense rows: one line each, the date at the right, so a section cell shows more tasks. */
+	:host([density='compact']) .what {
+		display: flex;
+		align-items: baseline;
+		gap: 10px;
+	}
+	:host([density='compact']) .name {
+		flex: 1;
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	:host([density='compact']) .meta {
+		flex: none;
+		flex-wrap: nowrap;
+		margin: 0;
+	}
+	:host([density='compact']) .meta .tag {
+		display: none;
+	}
+	:host([density='compact']) .counts {
+		gap: 6px;
+		padding-bottom: 6px;
+	}
+	:host([density='compact']) .count {
+		flex-direction: row;
+		justify-content: center;
+		align-items: baseline;
+		gap: 6px;
+		padding: 5px 4px;
+	}
+	:host([density='compact']) .count b {
+		font-size: 1.3em;
+	}
+	:host([density='compact']) h3 {
+		margin-top: 6px;
+	}
+	.groups section {
+		break-inside: avoid;
+	}
+	/* A narrow cell (a third of a phone, a small section): the list's name gives way to the task. */
+	@container (max-width: 330px) {
+		:host([density='compact']) .meta .in {
+			display: none;
+		}
+		header {
+			padding: 10px 12px 4px;
+		}
+	}
+	/* A wide cell (a card across two or three sections): groups side by side. */
+	@container (min-width: 680px) {
+		.groups {
+			columns: 2;
+			column-gap: 16px;
+		}
+	}
+	@container (min-width: 1040px) {
+		.groups {
+			columns: 3;
+		}
 	}
 
 	.nav {
