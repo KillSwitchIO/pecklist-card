@@ -1,5 +1,7 @@
 node_modules
-dist
+# The built card is kept in git: HACS serves dist/pecklist-card.js from the default branch.
+dist/*
+!dist/pecklist-card.js
 *.map
 .DS_Store
 .vscode

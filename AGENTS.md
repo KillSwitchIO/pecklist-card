@@ -21,6 +21,8 @@ A Home Assistant dashboard card (TypeScript and Lit, bundled by esbuild into
 - Behavior changes come with tests in `tests/`, using the stand-in Home Assistant in
   `tests/fake-hass.ts`. Look at the result too: `npm run demo` builds `dist/demo.html`, the card
   over the same stand-in.
+- `dist/pecklist-card.js` is in git because HACS serves it: rebuild and commit it with every source
+  change (the pipeline checks).
 - Conventional Commits, signed commits, explicit `git add` paths.
 
 ## Commands

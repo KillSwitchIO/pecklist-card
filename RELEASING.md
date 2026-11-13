@@ -1,8 +1,8 @@
 # Releasing
 
 The card is developed on GitLab and installed from its GitHub mirror, where HACS looks. A release
-is a plain `x.y.z` tag that matches `package.json`; the built `pecklist-card.js` is attached to the
-GitHub release, not kept in the repository.
+is a plain `x.y.z` tag that matches `package.json`; the built `pecklist-card.js` is kept in `dist/`
+and also attached to each GitHub release.
 
 ## Once, before the first release
 
@@ -14,9 +14,10 @@ GitHub release, not kept in the repository.
 - [ ] The card has run on a real Home Assistant for a while, installed as a HACS custom
       repository.
 
-HACS looks for `pecklist-card.js` in `dist/`, then in the latest release, then in the repository
-root. This repository keeps none in git, so the HACS check on GitHub can only pass once a release
-exists: make the first release, then run the **Validate** workflow by hand and see it green.
+HACS looks for `pecklist-card.js` in `dist/` first, so the built file is kept in git and HACS can
+install the card from the default branch before any release. After changing the source, run
+`npm run build` and commit `dist/pecklist-card.js` with it: the GitLab pipeline fails when the file
+in git is not what the source builds.
 
 ## Every release
 
