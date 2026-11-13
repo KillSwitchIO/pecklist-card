@@ -30,10 +30,11 @@ default:
 build:
   stage: build
   script:
+    # The file in git is what HACS serves: it must be what the source builds.
+    - cp dist/pecklist-card.js /tmp/committed.js
     - npm run build
     - test -s dist/pecklist-card.js
-    # The file in git is what HACS serves: it must be what the source builds.
-    - git diff --exit-code -- dist/pecklist-card.js
+    - cmp /tmp/committed.js dist/pecklist-card.js
   artifacts:
     paths:
       - dist/pecklist-card.js
