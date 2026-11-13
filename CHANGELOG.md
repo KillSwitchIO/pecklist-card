@@ -5,6 +5,8 @@ matches `package.json`; the GitHub mirror builds it and publishes it for HACS.
 
 ## Unreleased
 
+## 0.1.0 - 2026-11-13
+
 First version.
 
 - Four views: at a glance, list, agenda and a busy-day heatmap (a month, or a year of small months).
