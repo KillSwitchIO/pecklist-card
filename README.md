@@ -12,14 +12,15 @@ key ever reaches the browser.
 
 ## Install
 
-1. Install and set up the [PeckList integration](https://github.com/KillSwitchIO/pecklist-home-assistant) first.
-2. With [HACS](https://hacs.xyz): the three dots > **Custom repositories**, add
-   `https://github.com/KillSwitchIO/pecklist-card` as a **Dashboard**, then download **PeckList
-   Card**. HACS adds the dashboard resource for you.
-3. Reload the browser, edit a dashboard, **Add card**, and pick **PeckList**.
+The card ships with the [PeckList integration](https://github.com/KillSwitchIO/pecklist-home-assistant)
+from its version 0.2.0: install and set up the integration, and the card is there. Reload the
+browser, edit a dashboard, **Add card**, and pick **PeckList**.
 
-By hand: put `pecklist-card.js` from the latest release in `config/www/`, and add
-`/local/pecklist-card.js` as a JavaScript module under **Settings > Dashboards > Resources**.
+This repository is where the card is developed. It can still be added to
+[HACS](https://hacs.xyz) as a custom repository (the three dots > **Custom repositories**, add
+`https://github.com/KillSwitchIO/pecklist-card` as a **Dashboard**), which is only useful to try a
+build ahead of the integration. Do not keep both: remove this copy and its dashboard resource once
+the integration is at 0.2.0 or newer.
 
 ## Views
 
